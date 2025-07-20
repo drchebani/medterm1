@@ -1,0 +1,2001 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Quiz</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- html2canvas CDN for converting HTML to image -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <!-- jsPDF CDN for generating PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        /* Custom styles for the Inter font and general body */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f2f5; /* Light gray background */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .container {
+            background-color: #ffffff;
+            border-radius: 1rem; /* Rounded corners */
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            max-width: 600px;
+            width: 100%;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+        .question-container {
+            margin-bottom: 1.5rem;
+        }
+        .options-container {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+        .option-button {
+            background-color: #e2e8f0; /* Light blue-gray */
+            color: #334155; /* Darker text */
+            padding: 0.75rem 1.25rem;
+            border-radius: 0.75rem; /* More rounded */
+            text-align: left;
+            cursor: pointer;
+            transition: background-color 0.2s ease-in-out, transform 0.1s ease-in-out;
+            font-size: 1rem;
+            border: 2px solid transparent; /* Default border */
+        }
+        .option-button:hover {
+            background-color: #cbd5e1; /* Slightly darker on hover */
+            transform: translateY(-2px);
+        }
+        .option-button.selected {
+            background-color: #93c5fd; /* Blue-300 */
+            border-color: #3b82f6; /* Blue-500 */
+            color: #1e3a8a; /* Dark blue text */
+            font-weight: 600;
+        }
+        .option-button.correct {
+            background-color: #86efac; /* Green-300 */
+            border-color: #22c55e; /* Green-500 */
+            color: #166534; /* Dark green text */
+        }
+        .option-button.incorrect {
+            background-color: #fca5a5; /* Red-300 */
+            border-color: #ef4444; /* Red-500 */
+            color: #991b1b; /* Dark red text */
+        }
+        .feedback-message {
+            margin-top: 1rem;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            font-weight: 500;
+            text-align: center;
+        }
+        .feedback-message.correct {
+            background-color: #dcfce7; /* Green-100 */
+            color: #16a34a; /* Green-600 */
+        }
+        .feedback-message.incorrect {
+            background-color: #fee2e2; /* Red-100 */
+            color: #dc2626; /* Red-600 */
+        }
+        .submit-button {
+            background-color: #3b82f6; /* Blue-500 */
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.75rem;
+            font-size: 1.125rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s ease-in-out, transform 0.1s ease-in-out;
+            border: none;
+            align-self: flex-end; /* Align to the right */
+        }
+        .submit-button:hover {
+            background-color: #2563eb; /* Blue-600 */
+            transform: translateY(-2px);
+        }
+        .submit-button:disabled {
+            background-color: #9ca3af; /* Gray-400 */
+            cursor: not-allowed;
+            transform: none;
+        }
+        .score-container {
+            text-align: center;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #1f2937; /* Gray-800 */
+        }
+        .retake-button {
+            background-color: #10b981; /* Emerald-500 */
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.75rem;
+            font-size: 1.125rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s ease-in-out, transform 0.1s ease-in-out;
+            border: none;
+            margin-top: 1rem;
+        }
+        .retake-button:hover {
+            background-color: #059669; /* Emerald-600 */
+            transform: translateY(-2px);
+        }
+        .explain-button {
+            background-color: #f97316; /* Orange-500 */
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.75rem;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s ease-in-out, transform 0.1s ease-in-out;
+            border: none;
+            margin-top: 1rem;
+            align-self: flex-start; /* Align to the left */
+        }
+        .explain-button:hover {
+            background-color: #ea580c; /* Orange-600 */
+            transform: translateY(-2px);
+        }
+        .explanation-area {
+            background-color: #fef3c7; /* Amber-100 */
+            border-left: 4px solid #f59e0b; /* Amber-500 */
+            padding: 1rem;
+            border-radius: 0.5rem;
+            margin-top: 1rem;
+            color: #78350f; /* Amber-900 */
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+        .badge-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin-top: 2rem;
+            padding: 1.5rem;
+            background: linear-gradient(145deg, #a7f3d0, #34d399); /* Green gradient */
+            border-radius: 1.5rem;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
+            color: #1f2937;
+            text-align: center;
+            font-size: 1.2rem;
+            font-weight: 700;
+            animation: bounceIn 0.8s ease-out;
+            /* New: Fixed dimensions for the badge */
+            width: 800px;
+            height: 500px;
+            box-sizing: border-box; /* Include padding/border in width/height */
+            position: relative; /* Needed for absolute positioning of elements inside */
+        }
+
+        .badge-icon {
+            font-size: 4rem; /* Larger icon */
+            margin-bottom: 0.75rem;
+            color: #047857; /* Darker green */
+        }
+
+        .badge-text {
+            font-size: 1.8rem; /* Larger text for "Congratulations" */
+            font-weight: 800;
+            color: #065f46; /* Even darker green */
+            margin-bottom: 0.5rem;
+        }
+
+        .badge-name {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #1f2937; /* Dark gray */
+            margin-bottom: 0.75rem;
+        }
+
+        .badge-message {
+            font-size: 1.1rem;
+            color: #374151; /* Medium gray */
+        }
+
+        .health-metrix-footer {
+            position: absolute;
+            bottom: 1rem;
+            font-size: 0.8rem;
+            color: #4b5563; /* Gray-600 */
+        }
+        .health-metrix-footer a {
+            color: #1d4ed8; /* Blue-700 */
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .health-metrix-footer a:hover {
+            text-decoration: underline;
+        }
+
+
+        @keyframes bounceIn {
+            0%, 20%, 40%, 60%, 80%, 100% {
+                -webkit-animation-timing-function: cubic-bezier(0.215, 0.610, 0.355, 1.000);
+                animation-timing-function: cubic-bezier(0.215, 0.610, 0.355, 1.000);
+            }
+            0% {
+                opacity: 0;
+                -webkit-transform: scale3d(0.3, 0.3, 0.3);
+                transform: scale3d(0.3, 0.3, 0.3);
+            }
+            20% {
+                -webkit-transform: scale3d(1.1, 1.1, 1.1);
+                transform: scale3d(1.1, 1.1, 1.1);
+            }
+            40% {
+                -webkit-transform: scale3d(0.9, 0.9, 0.9);
+                transform: scale3d(0.9, 0.9, 0.9);
+            }
+            60% {
+                opacity: 1;
+                -webkit-transform: scale3d(1.03, 1.03, 1.03);
+                transform: scale3d(1.03, 1.03, 1.03);
+            }
+            80% {
+                -webkit-transform: scale3d(0.97, 0.97, 0.97);
+                transform: scale3d(0.97, 0.97, 0.97);
+            }
+            100% {
+                opacity: 1;
+                -webkit-transform: scale3d(1, 1, 1);
+                transform: scale3d(1, 1, 1);
+            }
+        }
+
+        .next-question-button {
+            background-color: #1d4ed8; /* Blue-700 */
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.75rem;
+            font-size: 1.125rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s ease-in-out, transform 0.1s ease-in-out;
+            border: none;
+            margin-top: 1rem;
+            align-self: flex-end; /* Align to the right */
+        }
+        .next-question-button:hover {
+            background-color: #1e40af; /* Blue-800 */
+            transform: translateY(-2px);
+        }
+
+        .download-button {
+            background-color: #4CAF50; /* Green */
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.75rem;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s ease-in-out, transform 0.1s ease-in-out;
+            border: none;
+            margin-top: 1rem;
+            margin-left: 0.5rem;
+            margin-right: 0.5rem;
+        }
+
+        .download-button:hover {
+            background-color: #45a049;
+            transform: translateY(-2px);
+        }
+
+        .download-button.pdf {
+            background-color: #f44336; /* Red for PDF */
+        }
+
+        .download-button.pdf:hover {
+            background-color: #da190b;
+        }
+    </style>
+</head>
+<body>
+    <div id="quiz-container" class="container">
+        <h1 class="text-3xl font-bold text-center text-gray-800 mb-6">Medical Terminology Quiz</h1>
+
+        <div id="question-area" class="question-container">
+            <p id="question-text" class="text-xl font-semibold text-gray-700 mb-4"></p>
+            <div id="options-area" class="options-container">
+                <!-- Options will be dynamically loaded here -->
+            </div>
+            <div id="feedback" class="feedback-message hidden"></div>
+            <button id="explain-button" class="explain-button hidden">✨ Explain Answer ✨</button>
+            <div id="explanation-area" class="explanation-area hidden"></div>
+            <button id="next-question-button" class="next-question-button hidden">Next Question &rarr;</button>
+        </div>
+
+        <button id="submit-button" class="submit-button" disabled>Submit Answer</button>
+
+        <div id="result-area" class="score-container hidden">
+            <p>You scored <span id="final-score">0</span> out of <span id="total-questions">0</span>!</p>
+            <div id="name-input-area" class="mt-4 hidden">
+                <label for="student-name" class="block text-gray-700 text-lg font-medium mb-2">Enter your name for the badge:</label>
+                <input type="text" id="student-name" placeholder="Your Name" class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800">
+                <button id="show-badge-button" class="submit-button mt-4 w-full">Show My Results & Badge</button>
+            </div>
+            <div id="badge-display-area">
+                <!-- Badge will be displayed here -->
+            </div>
+            <div id="download-buttons-area" class="mt-4 flex justify-center gap-4 hidden">
+                <button id="download-png-button" class="download-button">Download Badge (PNG)</button>
+                <button id="download-pdf-button" class="download-button pdf">Download Badge (PDF)</button>
+            </div>
+            <button id="retake-button" class="retake-button mt-6">Retake Quiz</button>
+        </div>
+    </div>
+
+    <script>
+        // Full list of quiz questions with embedded explanations
+        const allQuestions = [
+            {
+                question: "Which combining form means 'skin' and is derived from Greek?",
+                options: ["cutane", "dermat", "nephr", "ren"],
+                answer: "dermat",
+                explanation: "The combining form 'dermat-' comes from the Greek word 'derma', meaning skin. 'Cutane-' is the Latin equivalent."
+            },
+            {
+                question: "The Latin combining form for 'kidney' is:",
+                options: ["nephr", "ren", "stomat", "or"],
+                answer: "ren",
+                explanation: "'Ren-' is the Latin combining form for kidney, as seen in terms like 'renal'. 'Nephr-' is the Greek combining form for kidney."
+            },
+            {
+                question: "Which combining form refers to the 'mouth' and comes from Greek?",
+                options: ["or", "stomat", "dent", "gastr"],
+                answer: "stomat",
+                explanation: "'Stomat-' is derived from the Greek word 'stoma', meaning mouth. 'Or-' is the Latin combining form for mouth."
+            },
+            {
+                question: "What does 'arthr' mean?",
+                options: ["muscle", "bone", "joint", "nerve"],
+                answer: "joint",
+                explanation: "'Arthr-' comes from the Greek word 'arthron', meaning joint, as in 'arthritis' (inflammation of a joint)."
+            },
+            {
+                question: "The combining form 'hepat/o' refers to which organ?",
+                options: ["stomach", "intestine", "liver", "kidney"],
+                answer: "liver",
+                explanation: "'Hepat/o' is derived from the Greek word 'hepar', meaning liver. This is seen in terms like 'hepatitis' (inflammation of the liver)."
+            },
+            {
+                question: "What is the meaning of 'myel/o'?",
+                options: ["muscle", "nerve", "bone marrow; spinal cord", "brain"],
+                answer: "bone marrow; spinal cord",
+                explanation: "'Myel/o' can refer to both bone marrow and the spinal cord, as they are both central nervous system components. For example, 'myeloma' is a bone marrow cancer, and 'myelitis' is inflammation of the spinal cord."
+            },
+            {
+                question: "Which combining form means 'white'?",
+                options: ["erythr/o", "cyan/o", "leuk/o", "melan/o"],
+                answer: "leuk/o",
+                explanation: "'Leuk/o' comes from the Greek word 'leukos', meaning white, as in 'leukocyte' (white blood cell). 'Erythr/o' means red, 'cyan/o' means blue, and 'melan/o' means black."
+            },
+            {
+                question: "The combining form 'cardi/o' relates to the:",
+                options: ["lung", "heart", "blood", "vessel"],
+                answer: "heart",
+                explanation: "'Cardi/o' is derived from the Greek word 'kardia', meaning heart. This is fundamental to terms like 'cardiology' (study of the heart)."
+            },
+            {
+                question: "What does 'oste/o' refer to?",
+                options: ["ear", "bone", "joint", "muscle"],
+                answer: "bone",
+                explanation: "'Oste/o' comes from the Greek word 'osteon', meaning bone. Examples include 'osteoporosis' (porous bones)."
+            },
+            {
+                question: "Which combining form means 'fat'?",
+                options: ["hydr", "steat/o", "fibr/o", "lip/o"],
+                answer: "lip/o",
+                explanation: "'Lip/o' is derived from the Greek word 'lipos', meaning fat. 'Steat/o' also means fat, but 'lip/o' is more commonly used in many medical terms. 'Hydr-' means water, and 'fibr/o' means fiber."
+            },
+            {
+                question: "The combining form 'adip/o' means:",
+                options: ["gland", "fat", "muscle", "skin"],
+                answer: "fat",
+                explanation: "'Adip/o' is a combining form meaning fat, as seen in 'adipose tissue'."
+            },
+            {
+                question: "What does 'aden/o' refer to?",
+                options: ["vein", "gland", "artery", "nerve"],
+                answer: "gland",
+                explanation: "'Aden/o' means gland, as in 'adenoma' (a benign tumor of glandular tissue)."
+            },
+            {
+                question: "The combining form for 'gland' is:",
+                options: ["aden/o", "adrenal/o", "thym/o", "thyroid/o"],
+                answer: "aden/o",
+                explanation: "'Aden/o' specifically refers to a gland. 'Adrenal/o', 'thym/o', and 'thyroid/o' refer to specific glands."
+            },
+            {
+                question: "Which term means 'clumping, gluing'?",
+                options: ["alveol/o", "agglutin/o", "amni/o", "andr/o"],
+                answer: "agglutin/o",
+                explanation: "'Agglutin/o' means clumping or gluing, often used in immunology to describe the clumping of cells."
+            },
+            {
+                question: "The combining form 'alveol/o' refers to:",
+                options: ["air sac", "vessel", "male", "appendix"],
+                answer: "air sac",
+                explanation: "'Alveol/o' refers to an alveolus, which is an air sac, particularly in the lungs."
+            },
+            {
+                question: "What does 'andr/o' indicate?",
+                options: ["female", "male", "blood", "heart"],
+                answer: "male",
+                explanation: "'Andr/o' means male, as in 'androgen' (male sex hormone)."
+            },
+            {
+                question: "The combining form 'angi/o' means:",
+                options: ["widened blood vessel", "anus", "vessel (usually blood or lymph)", "aorta"],
+                answer: "vessel (usually blood or lymph)",
+                explanation: "'Angi/o' refers to a vessel, commonly a blood or lymph vessel, as in 'angiography' (imaging of blood vessels)."
+            },
+            {
+                question: "Which combining form means 'artery'?",
+                options: ["arteriol/o", "aort/o", "angi/o", "arteri/o"],
+                answer: "arteri/o",
+                explanation: "'Arteri/o' specifically means artery, as in 'arteriosclerosis' (hardening of the arteries)."
+            },
+            {
+                question: "What does 'ather/o' mean?",
+                options: ["joint", "fatty plaque", "atrium", "hearing"],
+                answer: "fatty plaque",
+                explanation: "'Ather/o' refers to fatty plaque, particularly in the context of atherosclerosis."
+            },
+            {
+                question: "The combining form 'audi/o' relates to:",
+                options: ["eye", "ear", "hearing", "sound"],
+                answer: "hearing",
+                explanation: "'Audi/o' means hearing, as in 'audiology' (the study of hearing)."
+            },
+            {
+                question: "What does 'blephar/o' mean?",
+                options: ["eyelid", "eye", "vision", "pupil"],
+                answer: "eyelid",
+                explanation: "'Blephar/o' refers to the eyelid, as in 'blepharitis' (inflammation of the eyelid)."
+            },
+            {
+                question: "The combining form 'brachi/o' refers to the:",
+                options: ["chest", "arm", "hand", "foot"],
+                answer: "arm",
+                explanation: "'Brachi/o' means arm, as in 'brachial artery'."
+            },
+            {
+                question: "Which combining form means 'bronchus'?",
+                options: ["bronchiol/o", "bronch/o", "pulmon/o", "pneumon/o"],
+                answer: "bronch/o",
+                explanation: "'Bronch/o' (or bronchi/o) refers to the bronchus, a major airway in the lungs."
+            },
+            {
+                question: "What does 'bucc/o' mean?",
+                options: ["lip", "tongue", "cheek", "mouth"],
+                answer: "cheek",
+                explanation: "'Bucc/o' refers to the cheek, as in 'buccal cavity'."
+            },
+            {
+                question: "The combining form 'calc/o' relates to:",
+                options: ["bone", "calcium", "cartilage", "stone"],
+                answer: "calcium",
+                explanation: "'Calc/o' means calcium, as in 'hypercalcemia' (high calcium levels)."
+            },
+            {
+                question: "What does 'carp/o' refer to?",
+                options: ["wrist bone", "thigh bone", "heel bone", "skull"],
+                answer: "wrist bone",
+                explanation: "'Carp/o' refers to the carpus, which is the wrist bone."
+            },
+            {
+                question: "The combining form 'cephal/o' means:",
+                options: ["neck", "head", "brain", "skull"],
+                answer: "head",
+                explanation: "'Cephal/o' means head, as in 'cephalalgia' (headache)."
+            },
+            {
+                question: "Which combining form refers to the 'neck' or 'cervix uteri'?",
+                options: ["crani/o", "cervic/o", "laryng/o", "trache/o"],
+                answer: "cervic/o",
+                explanation: "'Cervic/o' refers to the neck (cervical spine) or the cervix uteri (neck of the uterus)."
+            },
+            {
+                question: "What does 'cheil/o' mean?",
+                options: ["mouth", "tongue", "lip", "gum(s)"],
+                answer: "lip",
+                explanation: "'Cheil/o' refers to the lip, as in 'cheilosis' (a disorder of the lips)."
+            },
+            {
+                question: "The combining form 'chol/e' means:",
+                options: ["bile vessel", "gallbladder", "bile, gall", "bile duct"],
+                answer: "bile, gall",
+                explanation: "'Chol/e' means bile or gall, as in 'cholelithiasis' (gallstones)."
+            },
+            {
+                question: "What does 'cholecyst/o' refer to?",
+                options: ["bile vessel", "gallbladder", "bile duct", "liver"],
+                answer: "gallbladder",
+                explanation: "'Cholecyst/o' means gallbladder, as in 'cholecystitis' (inflammation of the gallbladder)."
+            },
+            {
+                question: "The combining form 'chrom/o' means:",
+                options: ["color", "hidden", "blue", "gray"],
+                answer: "color",
+                explanation: "'Chrom/o' means color, as in 'chromatic'."
+            },
+            {
+                question: "Which combining form means 'colon'?",
+                options: ["colp/o", "col/o", "conjunctiv/o", "coni/o"],
+                answer: "col/o",
+                explanation: "'Col/o' (or colon/o) refers to the colon, part of the large intestine."
+            },
+            {
+                question: "What does 'colp/o' mean?",
+                options: ["uterus", "vagina", "ovary", "cervix"],
+                answer: "vagina",
+                explanation: "'Colp/o' refers to the vagina, as in 'colposcopy' (visual examination of the vagina and cervix)."
+            },
+            {
+                question: "The combining form 'coni/o' means:",
+                options: ["dust", "pupil", "cornea", "heart"],
+                answer: "dust",
+                explanation: "'Coni/o' means dust, often used in terms related to lung diseases caused by inhaled dust."
+            },
+            {
+                question: "What does 'corne/o' refer to?",
+                options: ["pupil", "cornea", "iris", "eyelid"],
+                answer: "cornea",
+                explanation: "'Corne/o' refers to the cornea, the transparent front part of the eye."
+            },
+            {
+                question: "The combining form 'cost/o' relates to the:",
+                options: ["chest", "ribs", "sternum", "spine"],
+                answer: "ribs",
+                explanation: "'Cost/o' refers to the ribs, as in 'intercostal' (between the ribs)."
+            },
+            {
+                question: "What does 'crani/o' mean?",
+                options: ["brain", "head", "skull", "neck"],
+                answer: "cranium (skull)",
+                explanation: "'Crani/o' refers to the cranium, which is the skull."
+            },
+            {
+                question: "The combining form 'crin/o' means:",
+                options: ["secrete", "hidden", "water", "milk"],
+                answer: "secrete",
+                explanation: "'Crin/o' means to secrete, as in 'endocrine' (glands that secrete hormones directly into the bloodstream)."
+            },
+            {
+                question: "What does 'crypt/o' mean?",
+                options: ["color", "hidden", "blue", "gray"],
+                answer: "hidden",
+                explanation: "'Crypt/o' means hidden, as in 'cryptorchidism' (undescended testis)."
+            },
+            {
+                question: "The combining form 'cyan/o' means:",
+                options: ["red", "white", "blue", "gray"],
+                answer: "blue",
+                explanation: "'Cyan/o' means blue, as in 'cyanosis' (bluish discoloration of the skin due to lack of oxygen)."
+            },
+            {
+                question: "What does 'cycl/o' refer to in the eye?",
+                options: ["pupil", "iris", "ciliary body of the eye; circular, cycle", "cornea"],
+                answer: "ciliary body of the eye; circular, cycle",
+                explanation: "'Cycl/o' can refer to the ciliary body of the eye or a circular/cycle, as in 'cycloplegia' (paralysis of the ciliary muscle)."
+            },
+            {
+                question: "The combining form 'cyst/o' means:",
+                options: ["kidney", "bladder", "ureter", "urethra"],
+                answer: "bladder",
+                explanation: "'Cyst/o' means bladder, often referring to the urinary bladder, as in 'cystitis' (inflammation of the bladder)."
+            },
+            {
+                question: "What does 'dacry/o' mean?",
+                options: ["eye", "tear; lacrimal apparatus", "eyelid", "pupil"],
+                answer: "tear; lacrimal apparatus",
+                explanation: "'Dacry/o' refers to tear or the lacrimal apparatus (tear-producing system), as in 'dacryocystitis' (inflammation of the lacrimal sac)."
+            },
+            {
+                question: "The combining form 'dactyl/o' refers to:",
+                options: ["fingers; toes", "hand", "foot", "arm"],
+                answer: "fingers; toes",
+                explanation: "'Dactyl/o' refers to fingers or toes, as in 'polydactyly' (having extra fingers or toes)."
+            },
+            {
+                question: "What does 'dent/o' mean?",
+                options: ["mouth", "tongue", "gum(s)", "teeth"],
+                answer: "teeth",
+                explanation: "'Dent/o' refers to teeth, as in 'dentist' or 'dental'."
+            },
+            {
+                question: "The combining form 'duoden/o' refers to the:",
+                options: ["stomach", "intestine", "duodenum (first part of small intestine)", "colon"],
+                answer: "duodenum (first part of small intestine)",
+                explanation: "'Duoden/o' specifically refers to the duodenum, the first section of the small intestine."
+            },
+            {
+                question: "What does 'electr/o' mean?",
+                options: ["light", "sound", "electricity", "radiation"],
+                answer: "electricity",
+                explanation: "'Electr/o' means electricity, as in 'electrocardiogram' (ECG), which measures electrical activity of the heart."
+            },
+            {
+                question: "The combining form 'embol/o' means:",
+                options: ["blood clot", "plug", "vessel", "narrowing"],
+                answer: "embolus (plug)",
+                explanation: "'Embol/o' refers to an embolus, which is a plug (often a blood clot) that travels through the bloodstream."
+            },
+            {
+                question: "What does 'encephal/o' refer to?",
+                options: ["nerve", "spinal cord", "brain", "head"],
+                answer: "brain",
+                explanation: "'Encephal/o' refers to the brain, as in 'encephalitis' (inflammation of the brain)."
+            },
+            {
+                question: "The combining form 'epididym/o' refers to the:",
+                options: ["testis", "glans penis", "epididymis", "prostate gland"],
+                answer: "epididymis",
+                explanation: "'Epididym/o' refers to the epididymis, a coiled tube located at the back of the testis."
+            },
+            {
+                question: "What does 'epiglott/o' mean?",
+                options: ["larynx", "pharynx", "epiglottis", "trachea"],
+                answer: "epiglottis",
+                explanation: "'Epiglott/o' refers to the epiglottis, a flap that covers the windpipe during swallowing."
+            },
+            {
+                question: "The combining form 'eosin/o' means:",
+                options: ["red", "white", "dawn (rose-colored)", "blue"],
+                answer: "dawn (rose-colored)",
+                explanation: "'Eosin/o' means dawn or rose-colored, referring to eosinophils, a type of white blood cell that stains pink with eosin dye."
+            },
+            {
+                question: "What does 'erythr/o' mean?",
+                options: ["white", "red", "blue", "gray"],
+                answer: "red",
+                explanation: "'Erythr/o' means red, as in 'erythrocyte' (red blood cell)."
+            },
+            {
+                question: "The combining form 'esophag/o' refers to the:",
+                options: ["stomach", "intestine", "esophagus", "pharynx"],
+                answer: "esophagus",
+                explanation: "'Esophag/o' refers to the esophagus, the tube connecting the throat to the stomach."
+            },
+            {
+                question: "What does 'fasci/o' mean?",
+                options: ["fiber", "muscle", "band, fascia", "tendon"],
+                answer: "band, fascia (fibrous membrane supporting and separating muscles)",
+                explanation: "'Fasci/o' refers to fascia, a fibrous membrane that supports and separates muscles."
+            },
+            {
+                question: "The combining form 'femor/o' refers to the:",
+                options: ["thigh bone", "lower leg bone", "hip bone", "arm bone"],
+                answer: "femur (thigh bone)",
+                explanation: "'Femor/o' refers to the femur, which is the thigh bone."
+            },
+            {
+                question: "What does 'fibr/o' mean?",
+                options: ["fat", "fiber, fibrous tissue", "muscle", "tendon"],
+                answer: "fiber, fibrous tissue",
+                explanation: "'Fibr/o' means fiber or fibrous tissue, as in 'fibromyalgia'."
+            },
+            {
+                question: "The combining form 'fibul/o' refers to the:",
+                options: ["tibia", "femur", "fibula (smaller bone of lower leg)", "patella"],
+                answer: "fibula (smaller bone of lower leg)",
+                explanation: "'Fibul/o' refers to the fibula, the smaller bone in the lower leg."
+            },
+            {
+                question: "What does 'galact/o' mean?",
+                options: ["water", "milk", "sugar", "sweat"],
+                answer: "milk",
+                explanation: "'Galact/o' means milk, as in 'galactorrhea' (excessive milk production)."
+            },
+            {
+                question: "The combining form 'gangli/o' means:",
+                options: ["nerve", "gland", "ganglion (knot or knotlike mass)", "brain"],
+                answer: "ganglion (knot or knotlike mass)",
+                explanation: "'Gangli/o' refers to a ganglion, a knot or knot-like mass of nerve cells."
+            },
+            {
+                question: "What does 'genit/o' refer to?",
+                options: ["gonads", "male", "female", "genitalia"],
+                answer: "genitalia",
+                explanation: "'Genit/o' refers to the genitalia, the reproductive organs."
+            },
+            {
+                question: "The combining form 'gingiv/o' means:",
+                options: ["lip", "tongue", "gum(s)", "teeth"],
+                answer: "gum(s)",
+                explanation: "'Gingiv/o' refers to the gums, as in 'gingivitis' (inflammation of the gums)."
+            },
+            {
+                question: "What does 'gli/o' mean?",
+                options: ["nerve", "glue; neuroglial tissue", "brain", "spinal cord"],
+                answer: "glue; neuroglial tissue",
+                explanation: "'Gli/o' means glue or neuroglial tissue, referring to the supportive cells of the nervous system."
+            },
+            {
+                question: "The combining form 'glomerul/o' refers to the:",
+                options: ["kidney", "renal pelvis", "glomerulus", "bladder"],
+                answer: "glomerulus",
+                explanation: "'Glomerul/o' refers to the glomerulus, a tiny filtering unit in the kidney."
+            },
+            {
+                question: "What does 'gloss/o' mean?",
+                options: ["mouth", "lip", "tongue", "throat"],
+                answer: "tongue",
+                explanation: "'Gloss/o' refers to the tongue, as in 'glossitis' (inflammation of the tongue)."
+            },
+            {
+                question: "The combining form 'gluc/o' (or glyc/o, glycos/o) means:",
+                options: ["fat", "sugar, sweetness", "water", "salt"],
+                answer: "sugar, sweetness",
+                explanation: "These combining forms all refer to sugar or sweetness, as in 'glucose' or 'glycogen'."
+            },
+            {
+                question: "What does 'glauc/o' mean?",
+                options: ["blue", "green", "gray", "red"],
+                answer: "gray",
+                explanation: "'Glauc/o' means gray, often associated with the grayish appearance in glaucoma."
+            },
+            {
+                question: "The combining form 'gonad/o' refers to:",
+                options: ["male", "female", "gonads, sex glands", "genitalia"],
+                answer: "gonads, sex glands",
+                explanation: "'Gonad/o' refers to the gonads, which are the sex glands (testes in males, ovaries in females)."
+            },
+            {
+                question: "What does 'goni/o' mean?",
+                options: ["curve", "angle", "straight", "bent"],
+                answer: "angle",
+                explanation: "'Goni/o' means angle, as in 'gonioscopy' (examination of the angle of the eye)."
+            },
+            {
+                question: "The combining form 'granul/o' means:",
+                options: ["cell", "nucleus", "granule", "tissue"],
+                answer: "granule",
+                explanation: "'Granul/o' refers to a granule, often seen in types of white blood cells like granulocytes."
+            },
+            {
+                question: "What does 'gynec/o' mean?",
+                options: ["male", "female", "child", "elderly"],
+                answer: "woman, female",
+                explanation: "'Gynec/o' means woman or female, as in 'gynecology' (the study of the female reproductive system)."
+            },
+            {
+                question: "The combining form 'hemangi/o' refers to a:",
+                options: ["blood clot", "blood vessel", "lymph vessel", "vein"],
+                answer: "blood vessel",
+                explanation: "'Hemangi/o' specifically refers to a blood vessel, as in 'hemangioma' (a benign tumor of blood vessels)."
+            },
+            {
+                question: "What does 'hemat/o' mean?",
+                options: ["water", "blood", "fat", "milk"],
+                answer: "blood",
+                explanation: "'Hemat/o' means blood, as in 'hematology' (the study of blood)."
+            },
+            {
+                question: "The combining form 'hidr/o' means:",
+                options: ["water", "sweat", "milk", "urine"],
+                answer: "sweat",
+                explanation: "'Hidr/o' means sweat, as in 'hyperhidrosis' (excessive sweating)."
+            },
+            {
+                question: "What does 'hist/o' mean?",
+                options: ["cell", "tissue", "organ", "body"],
+                answer: "tissue",
+                explanation: "'Hist/o' means tissue, as in 'histology' (the study of tissues)."
+            },
+            {
+                question: "The combining form 'home/o' means:",
+                options: ["different", "same, alike", "foreign", "strange"],
+                answer: "same, alike",
+                explanation: "'Home/o' means same or alike, as in 'homeostasis' (maintaining a stable internal environment)."
+            },
+            {
+                question: "What does 'humer/o' refer to?",
+                options: ["thigh bone", "upper arm bone", "shoulder blade", "collarbone"],
+                answer: "humerus (upper arm bone)",
+                explanation: "'Humer/o' refers to the humerus, which is the upper arm bone."
+            },
+            {
+                question: "The combining form 'ile/o' refers to the:",
+                options: ["duodenum", "jejunum", "ileum (third part of small intestine)", "colon"],
+                answer: "ileum (third part of small intestine)",
+                explanation: "'Ile/o' refers to the ileum, the third and final part of the small intestine."
+            },
+            {
+                question: "What does 'ili/o' refer to?",
+                options: ["ischium", "pubis", "ilium (lateral, flaring portion of hip bone)", "sacrum"],
+                answer: "ilium (lateral, flaring portion of hip bone)",
+                explanation: "'Ili/o' refers to the ilium, the large, flaring upper part of the hip bone."
+            },
+            {
+                question: "The combining form 'immun/o' means:",
+                options: ["infection", "immune, immunity, safe", "disease", "foreign"],
+                answer: "immune, immunity, safe",
+                explanation: "'Immun/o' refers to immune, immunity, or being safe, as in 'immunology' (the study of the immune system)."
+            },
+            {
+                question: "What does 'inguin/o' mean?",
+                options: ["abdomen", "pelvis", "groin", "thigh"],
+                answer: "groin",
+                explanation: "'Inguin/o' refers to the groin area, as in 'inguinal hernia'."
+            },
+            {
+                question: "The combining form 'irid/o' refers to the:",
+                options: ["pupil", "cornea", "lens", "iris"],
+                answer: "iris",
+                explanation: "'Irid/o' refers to the iris, the colored part of the eye."
+            },
+            {
+                question: "What does 'ischi/o' refer to?",
+                options: ["ilium", "pubis", "ischium (lower portion of hip bone)", "sacrum"],
+                answer: "ischium (lower portion of hip bone)",
+                explanation: "'Ischi/o' refers to the ischium, the lower and back part of the hip bone."
+            },
+            {
+                question: "The combining form 'jejun/o' refers to the:",
+                options: ["duodenum", "jejunum (second part of small intestine)", "ileum", "colon"],
+                answer: "jejunum (second part of small intestine)",
+                explanation: "'Jejun/o' refers to the jejunum, the middle section of the small intestine."
+            },
+            {
+                question: "What does 'kal/i' mean?",
+                options: ["sodium", "potassium (an electrolyte)", "calcium", "iron"],
+                answer: "potassium (an electrolyte)",
+                explanation: "'Kal/i' refers to potassium, an important electrolyte, as in 'hypokalemia' (low potassium)."
+            },
+            {
+                question: "The combining form 'kary/o' refers to the:",
+                options: ["cell", "nucleus", "tissue", "organ"],
+                answer: "nucleus",
+                explanation: "'Kary/o' refers to the nucleus, as in 'eukaryotic' (cells with a true nucleus)."
+            },
+            {
+                question: "What does 'kerat/o' mean?",
+                options: ["horny tissue; hard; cornea", "lens", "pupil", "eyelid"],
+                answer: "horny tissue; hard; cornea",
+                explanation: "'Kerat/o' can refer to horny tissue (like keratin), hard structures, or the cornea of the eye."
+            },
+            {
+                question: "The combining form 'keton/o' refers to:",
+                options: ["sugar", "fat", "ketone bodies (acids and acetones)", "protein"],
+                answer: "ketone bodies (acids and acetones)",
+                explanation: "'Keton/o' refers to ketone bodies, which are acids and acetones produced during fat metabolism."
+            },
+            {
+                question: "What does 'kinesi/o' mean?",
+                options: ["feeling", "sensation", "movement", "paralysis"],
+                answer: "movement",
+                explanation: "'Kinesi/o' means movement, as in 'kinesiology' (the study of human movement)."
+            },
+            {
+                question: "The combining form 'kyph/o' means:",
+                options: ["swayback", "humpback", "crooked", "straight"],
+                answer: "humpback",
+                explanation: "'Kyph/o' means humpback, referring to an exaggerated outward curvature of the thoracic spine (kyphosis)."
+            },
+            {
+                question: "What does 'labyrinth/o' refer to?",
+                options: ["outer ear", "middle ear", "inner ear", "eardrum"],
+                answer: "labyrinth (inner ear)",
+                explanation: "'Labyrinth/o' refers to the labyrinth, which is the complex structure of the inner ear."
+            },
+            {
+                question: "The combining form 'lacrim/o' means:",
+                options: ["tear; lacrimal apparatus (duct, sac, or gland)", "eye", "eyelid", "vision"],
+                answer: "tear; lacrimal apparatus (duct, sac, or gland)",
+                explanation: "'Lacrim/o' refers to tears or the lacrimal apparatus, which produces tears."
+            },
+            {
+                question: "What does 'lact/o' mean?",
+                options: ["water", "milk", "sugar", "fat"],
+                answer: "milk",
+                explanation: "'Lact/o' means milk, as in 'lactose' (milk sugar)."
+            },
+            {
+                question: "The combining form 'lamin/o' refers to the:",
+                options: ["vertebral body", "spinous process", "lamina (part of vertebral arch)", "nerve root"],
+                answer: "lamina (part of vertebral arch)",
+                explanation: "'Lamin/o' refers to the lamina, a part of the vertebral arch, often seen in 'laminectomy'."
+            },
+            {
+                question: "What does 'laryng/o' refer to?",
+                options: ["pharynx", "trachea", "larynx (voice box)", "bronchus"],
+                answer: "larynx (voice box)",
+                explanation: "'Laryng/o' refers to the larynx, commonly known as the voice box."
+            },
+            {
+                question: "The combining form 'leiomy/o' means:",
+                options: ["striated muscle", "cardiac muscle", "smooth muscle (visceral)", "skeletal muscle"],
+                answer: "smooth muscle (visceral)",
+                explanation: "'Leiomy/o' refers to smooth (visceral) muscle, found in internal organs, as opposed to striated muscle."
+            },
+            {
+                question: "What does 'lept/o' mean?",
+                options: ["thick", "thin, slender", "heavy", "light"],
+                answer: "thin, slender",
+                explanation: "'Lept/o' means thin or slender, as in 'leptomeninges' (the delicate inner membranes of the brain and spinal cord)."
+            },
+            {
+                question: "The combining form 'lex/o' means:",
+                options: ["speech", "word, phrase", "language", "reading"],
+                answer: "word, phrase",
+                explanation: "'Lex/o' means word or phrase, as in 'dyslexia' (difficulty with words/reading)."
+            },
+            {
+                question: "What does 'lingu/o' mean?",
+                options: ["mouth", "lip", "tongue", "throat"],
+                answer: "tongue",
+                explanation: "'Lingu/o' refers to the tongue, as in 'sublingual' (under the tongue)."
+            },
+            {
+                question: "The combining form 'lith/o' means:",
+                options: ["stone, calculus", "fat", "lobe", "water"],
+                answer: "stone, calculus",
+                explanation: "'Lith/o' means stone or calculus, as in 'nephrolithiasis' (kidney stones)."
+            },
+            {
+                question: "What does 'lob/o' mean?",
+                options: ["lobe", "lung", "brain", "liver"],
+                answer: "lobe",
+                explanation: "'Lob/o' refers to a lobe, a well-defined part of an organ like the lung or brain."
+            },
+            {
+                question: "The combining form 'lord/o' means:",
+                options: ["humpback", "crooked", "curve, swayback", "straight"],
+                answer: "curve, swayback",
+                explanation: "'Lord/o' means curve or swayback, referring to an exaggerated inward curvature of the lumbar spine (lordosis)."
+            },
+            {
+                question: "What does 'lumb/o' refer to?",
+                options: ["chest", "neck", "loins (lower back)", "hip"],
+                answer: "loins (lower back)",
+                explanation: "'Lumb/o' refers to the loins or lower back, as in 'lumbar spine'."
+            },
+            {
+                question: "The combining form 'lymphaden/o' refers to a:",
+                options: ["lymph vessel", "lymph gland (node)", "spleen", "thymus"],
+                answer: "lymph gland (node)",
+                explanation: "'Lymphaden/o' refers to a lymph gland or lymph node, as in 'lymphadenopathy' (swollen lymph nodes)."
+            },
+            {
+                question: "What does 'lymphangi/o' refer to?",
+                options: ["lymph gland", "lymph vessel", "blood vessel", "spleen"],
+                answer: "lymph vessel",
+                explanation: "'Lymphangi/o' refers to a lymph vessel, which carries lymph fluid."
+            },
+            {
+                question: "The combining form 'mamm/o' means:",
+                options: ["chest", "breast", "rib", "gland"],
+                answer: "breast",
+                explanation: "'Mamm/o' (or mast/o) refers to the breast, as in 'mammography' (X-ray imaging of the breast)."
+            },
+            {
+                question: "What does 'mastoid/o' refer to?",
+                options: ["ear", "mastoid process", "skull", "bone"],
+                answer: "mastoid process",
+                explanation: "'Mastoid/o' refers to the mastoid process, a bony projection behind the ear."
+            },
+            {
+                question: "The combining form 'meat/o' means:",
+                options: ["opening, meatus", "tube", "canal", "vessel"],
+                answer: "opening, meatus",
+                explanation: "'Meat/o' refers to an opening or meatus, such as the external auditory meatus (ear canal opening)."
+            },
+            {
+                question: "What does 'mening/o' (or meningi/o) refer to?",
+                options: ["brain", "spinal cord", "nerve", "meninges (membranes covering the brain and spinal cord)"],
+                answer: "meninges (membranes covering the brain and spinal cord)",
+                explanation: "These forms refer to the meninges, the protective membranes covering the brain and spinal cord, as in 'meningitis'."
+            },
+            {
+                question: "The combining form 'men/o' means:",
+                options: ["male", "female", "menses, menstruation", "birth"],
+                answer: "menses, menstruation",
+                explanation: "'Men/o' refers to menses or menstruation, as in 'menopause'."
+            },
+            {
+                question: "What does 'metacarp/o' refer to?",
+                options: ["wrist bones", "hand bones", "foot bones", "finger bones"],
+                answer: "metacarpus (hand bones)",
+                explanation: "'Metacarp/o' refers to the metacarpus, which are the hand bones located between the wrist and fingers."
+            },
+            {
+                question: "The combining form 'metatars/o' refers to the:",
+                options: ["ankle bones", "foot bones", "toe bones", "shin bone"],
+                answer: "metatarsus (foot bones)",
+                explanation: "'Metatars/o' refers to the metatarsus, which are the foot bones between the ankle and toes."
+            },
+            {
+                question: "What does 'metr/o' (or metri/o) mean?",
+                options: ["measure", "uterus (womb); measure", "ovary", "vagina"],
+                answer: "uterus (womb); measure",
+                explanation: "These forms refer to the uterus (womb) or to measure, as in 'endometrial' (lining of the uterus) or 'metry' (measurement)."
+            },
+            {
+                question: "The combining form 'morph/o' means:",
+                options: ["form, shape, structure", "function", "growth", "development"],
+                answer: "form, shape, structure",
+                explanation: "'Morph/o' means form, shape, or structure, as in 'morphology' (the study of form and structure)."
+            },
+            {
+                question: "What does 'muscul/o' (or my/o) refer to?",
+                options: ["bone", "nerve", "muscle", "tendon"],
+                answer: "muscle",
+                explanation: "Both 'muscul/o' and 'my/o' refer to muscle, as in 'muscular' or 'myopathy' (muscle disease)."
+            },
+            {
+                question: "The combining form 'myring/o' refers to the:",
+                options: ["outer ear", "middle ear", "tympanic membrane (eardrum)", "inner ear"],
+                answer: "tympanic membrane (eardrum)",
+                explanation: "'Myring/o' refers to the tympanic membrane, commonly known as the eardrum."
+            },
+            {
+                question: "What does 'nas/o' mean?",
+                options: ["mouth", "throat", "nose", "ear"],
+                answer: "nose",
+                explanation: "'Nas/o' refers to the nose, as in 'nasal cavity'."
+            },
+            {
+                question: "The combining form 'nat/o' means:",
+                options: ["growth", "birth", "development", "origin"],
+                answer: "birth",
+                explanation: "'Nat/o' means birth, as in 'neonatal' (newborn)."
+            },
+            {
+                question: "What does 'neur/o' refer to?",
+                options: ["brain", "spinal cord", "nerve", "muscle"],
+                answer: "nerve",
+                explanation: "'Neur/o' refers to a nerve, as in 'neurology' (the study of the nervous system)."
+            },
+            {
+                question: "The combining form 'neutr/o' means:",
+                options: ["acidic", "alkaline", "neutral, neither", "basic"],
+                answer: "neutral, neither",
+                explanation: "'Neutr/o' means neutral or neither, referring to neutrophils, a type of white blood cell that stains neutrally."
+            },
+            {
+                question: "What does 'noct/o' mean?",
+                options: ["day", "night", "sleep", "wake"],
+                answer: "night",
+                explanation: "'Noct/o' means night, as in 'nocturia' (frequent urination at night)."
+            },
+            {
+                question: "The combining form 'nucle/o' refers to the:",
+                options: ["cell", "tissue", "nucleus", "organ"],
+                answer: "nucleus",
+                explanation: "'Nucle/o' refers to the nucleus, the central part of a cell."
+            },
+            {
+                question: "What does 'odont/o' mean?",
+                options: ["mouth", "gum(s)", "teeth", "tongue"],
+                answer: "teeth",
+                explanation: "'Odont/o' refers to teeth, as in 'orthodontics' (straightening of teeth)."
+            },
+            {
+                question: "The combining form 'oophor/o' (or ovari/o) refers to the:",
+                options: ["uterus", "vagina", "ovary", "fallopian tube"],
+                answer: "ovary",
+                explanation: "Both 'oophor/o' and 'ovari/o' refer to the ovary, the female gonad."
+            },
+            {
+                question: "What does 'olig/o' mean?",
+                options: ["many", "few", "large", "scanty"],
+                answer: "scanty",
+                explanation: "'Olig/o' means scanty or few, as in 'oliguria' (scanty urination)."
+            },
+            {
+                question: "The combining form 'onych/o' refers to the:",
+                options: ["hair", "skin", "nails", "glands"],
+                answer: "nails",
+                explanation: "'Onych/o' refers to the nails, as in 'onychomycosis' (fungal infection of the nails)."
+            },
+            {
+                question: "What does 'opt/o' (or optic/o) refer to?",
+                options: ["ear", "nose", "eye, vision", "hearing"],
+                answer: "eye, vision",
+                explanation: "These forms refer to the eye or vision, as in 'optometry' or 'optic nerve'."
+            },
+            {
+                question: "The combining form 'orch/o' (or orchi/o, orchid/o) refers to the:",
+                options: ["penis", "scrotum", "testis (plural, testes)", "prostate gland"],
+                answer: "testis (plural, testes)",
+                explanation: "All these forms refer to the testis (testicle), the male gonad."
+            },
+            {
+                question: "What does 'or/o' mean?",
+                options: ["nose", "mouth", "ear", "throat"],
+                answer: "mouth",
+                explanation: "'Or/o' is the Latin combining form for mouth, as in 'oral cavity'."
+            },
+            {
+                question: "The combining form 'ox/i' (or ox/o) means:",
+                options: ["carbon dioxide", "oxygen", "nitrogen", "hydrogen"],
+                answer: "oxygen",
+                explanation: "These forms refer to oxygen, as in 'hypoxia' (low oxygen levels)."
+            },
+            {
+                question: "What does 'pancreat/o' refer to?",
+                options: ["liver", "spleen", "pancreas", "gallbladder"],
+                answer: "pancreas",
+                explanation: "'Pancreat/o' refers to the pancreas, an organ involved in digestion and hormone production."
+            },
+            {
+                question: "The combining form 'parathyroid/o' refers to the:",
+                options: ["thyroid gland", "adrenal glands", "parathyroid glands", "pituitary gland"],
+                answer: "parathyroid glands",
+                explanation: "'Parathyroid/o' refers to the parathyroid glands, which regulate calcium levels."
+            },
+            {
+                question: "What does 'patell/o' refer to?",
+                options: ["thigh bone", "shin bone", "kneecap", "hip bone"],
+                answer: "patella (kneecap)",
+                explanation: "'Patell/o' refers to the patella, which is the kneecap."
+            },
+            {
+                question: "The combining form 'ped/i' (or ped/o) means:",
+                options: ["hand; adult", "foot; child", "arm; elderly", "leg; infant"],
+                answer: "foot; child",
+                explanation: "These forms can mean both foot (as in 'pedicure') and child (as in 'pediatrics')."
+            },
+            {
+                question: "What does 'pector/o' mean?",
+                options: ["abdomen", "back", "chest", "shoulder"],
+                answer: "chest",
+                explanation: "'Pector/o' refers to the chest, as in 'pectoral muscles'."
+            },
+            {
+                question: "The combining form 'pelv/i' refers to the:",
+                options: ["abdomen", "hip", "pelvis", "lower back"],
+                answer: "pelvis",
+                explanation: "'Pelv/i' refers to the pelvis, the bony structure at the base of the spine."
+            },
+            {
+                question: "What does 'perine/o' refer to?",
+                options: ["abdomen", "groin", "perineum (area between scrotum [or vulva in the female] and anus)", "buttock"],
+                answer: "perineum (area between scrotum [or vulva in the female] and anus)",
+                explanation: "'Perine/o' refers to the perineum, the area between the genitals and the anus."
+            },
+            {
+                question: "The combining form 'phac/o' refers to the:",
+                options: ["pupil", "iris", "cornea", "lens"],
+                answer: "lens",
+                explanation: "'Phac/o' refers to the lens of the eye, as in 'aphakia' (absence of the lens)."
+            },
+            {
+                question: "What does 'phalang/o' refer to?",
+                options: ["wrist bones", "ankle bones", "fingers; toes", "hand bones"],
+                answer: "phalanges (bones of the fingers and toes)",
+                explanation: "'Phalang/o' refers to the phalanges, which are the bones of the fingers and toes."
+            },
+            {
+                question: "The combining form 'pharyng/o' refers to the:",
+                options: ["larynx", "trachea", "pharynx (throat)", "esophagus"],
+                answer: "pharynx (throat)",
+                explanation: "'Pharyng/o' refers to the pharynx, commonly known as the throat."
+            },
+            {
+                question: "What does 'phag/o' mean?",
+                options: ["eating", "drinking", "swallowing, eating", "digestion"],
+                answer: "swallowing, eating",
+                explanation: "'Phag/o' means swallowing or eating, as in 'phagocyte' (a cell that engulfs other cells or particles)."
+            },
+            {
+                question: "The combining form 'phleb/o' means:",
+                options: ["artery", "vein", "vessel", "blood"],
+                answer: "vein",
+                explanation: "'Phleb/o' means vein, as in 'phlebitis' (inflammation of a vein)."
+            },
+            {
+                question: "What does 'phren/o' mean?",
+                options: ["lung", "heart", "diaphragm; mind", "chest"],
+                answer: "diaphragm; mind",
+                explanation: "'Phren/o' can refer to both the diaphragm (the muscle of respiration) and the mind."
+            },
+            {
+                question: "The combining form 'pil/o' means:",
+                options: ["skin", "nails", "hair", "gland"],
+                answer: "hair",
+                explanation: "'Pil/o' refers to hair, as in 'piloerection' (goosebumps)."
+            },
+            {
+                question: "What does 'pleur/o' refer to?",
+                options: ["lung", "chest", "pleura", "diaphragm"],
+                answer: "pleura",
+                explanation: "'Pleur/o' refers to the pleura, the membrane surrounding the lungs and lining the chest cavity."
+            },
+            {
+                question: "The combining form 'pneumon/o' (or pneum/o) means:",
+                options: ["heart; blood", "air; lung", "water; fluid", "bone; joint"],
+                answer: "air; lung",
+                explanation: "These forms refer to air or the lung, as in 'pneumonia' (lung inflammation)."
+            },
+            {
+                question: "What does 'pod/o' mean?",
+                options: ["hand", "foot", "arm", "leg"],
+                answer: "foot",
+                explanation: "'Pod/o' means foot, as in 'podiatry' (medical care of the foot)."
+            },
+            {
+                question: "The combining form 'poikil/o' means:",
+                options: ["straight", "crooked", "varied, irregular", "constant"],
+                answer: "varied, irregular",
+                explanation: "'Poikil/o' means varied or irregular, often used in hematology for irregularly shaped cells."
+            },
+            {
+                question: "What does 'poli/o' mean?",
+                options: ["white", "black", "gray; gray matter (of brain or spinal cord)", "red"],
+                answer: "gray; gray matter (of brain or spinal cord)",
+                explanation: "'Poli/o' means gray, specifically referring to the gray matter of the brain or spinal cord, as in 'poliomyelitis'."
+            },
+            {
+                question: "The combining form 'proct/o' refers to the:",
+                options: ["colon", "small intestine", "anus, rectum", "stomach"],
+                answer: "anus, rectum",
+                explanation: "'Proct/o' refers to the anus and rectum, as in 'proctology' (study of the rectum and anus)."
+            },
+            {
+                question: "What does 'prostat/o' refer to?",
+                options: ["testis", "epididymis", "prostate gland", "seminal vesicle"],
+                answer: "prostate gland",
+                explanation: "'Prostat/o' refers to the prostate gland, a male reproductive gland."
+            },
+            {
+                question: "The combining form 'pub/o' refers to the:",
+                options: ["hip bone", "pelvis bone (anterior part of pelvic bone)", "sacrum", "coccyx"],
+                answer: "pelvis bone (anterior part of pelvic bone)",
+                explanation: "'Pub/o' refers to the pubis, the anterior part of the pelvic bone."
+            },
+            {
+                question: "What does 'pulmon/o' refer to?",
+                options: ["heart", "lung", "bronchus", "trachea"],
+                answer: "lung",
+                explanation: "'Pulmon/o' refers to the lung, as in 'pulmonary artery'."
+            },
+            {
+                question: "The combining form 'pupill/o' refers to the:",
+                options: ["iris", "cornea", "lens", "pupil"],
+                answer: "pupil",
+                explanation: "'Pupill/o' refers to the pupil, the opening in the center of the iris."
+            },
+            {
+                question: "What does 'pyel/o' refer to?",
+                options: ["kidney", "bladder", "renal pelvis", "ureter"],
+                answer: "renal pelvis",
+                explanation: "'Pyel/o' refers to the renal pelvis, the funnel-shaped part of the kidney that collects urine."
+            },
+            {
+                question: "The combining form 'pylor/o' refers to the:",
+                options: ["stomach", "duodenum", "pylorus", "intestine"],
+                answer: "pylorus",
+                explanation: "'Pylor/o' refers to the pylorus, the muscular valve that controls food emptying from the stomach into the small intestine."
+            },
+            {
+                question: "What does 'py/o' mean?",
+                options: ["blood", "water", "pus", "fluid"],
+                answer: "pus",
+                explanation: "'Py/o' means pus, as in 'pyogenic' (pus-forming)."
+            },
+            {
+                question: "The combining form 'radi/o' means:",
+                options: ["light; vision", "sound; hearing", "radiation, x-ray; radius (lower arm bone on thumb side)", "electricity; nerve"],
+                answer: "radiation, x-ray; radius (lower arm bone on thumb side)",
+                explanation: "'Radi/o' can refer to radiation/X-rays (as in 'radiology') or the radius bone in the forearm."
+            },
+            {
+                question: "What does 'radicul/o' refer to?",
+                options: ["nerve", "spinal cord", "nerve root", "brain"],
+                answer: "nerve root",
+                explanation: "'Radicul/o' refers to a nerve root, where nerves exit the spinal cord, as in 'radiculopathy'."
+            },
+            {
+                question: "The combining form 'rect/o' refers to the:",
+                options: ["colon", "small intestine", "rectum", "anus"],
+                answer: "rectum",
+                explanation: "'Rect/o' refers to the rectum, the final section of the large intestine."
+            },
+            {
+                question: "What does 'reticul/o' mean?",
+                options: ["net, mesh", "fiber", "tissue", "cell"],
+                answer: "net, mesh",
+                explanation: "'Reticul/o' means net or mesh, referring to a network, as in 'reticulocyte' (an immature red blood cell with a reticular network)."
+            },
+            {
+                question: "The combining form 'retin/o' refers to the:",
+                options: ["iris", "cornea", "lens", "retina"],
+                answer: "retina",
+                explanation: "'Retin/o' refers to the retina, the light-sensitive layer at the back of the eye."
+            },
+            {
+                question: "What does 'rhabdomy/o' mean?",
+                options: ["smooth muscle", "cardiac muscle", "rod-shaped (striated) muscle", "tendon"],
+                answer: "rod-shaped (striated) muscle",
+                explanation: "'Rhabdomy/o' refers to rod-shaped or striated muscle (skeletal muscle), as in 'rhabdomyolysis'."
+            },
+            {
+                question: "The combining form 'rhabd/o' means:",
+                options: ["rod-shaped (striated)", "smooth", "cardiac", "flat"],
+                answer: "rod-shaped (striated)",
+                explanation: "'Rhabd/o' specifically means rod-shaped or striated."
+            },
+            {
+                question: "What does 'rhin/o' mean?",
+                options: ["ear", "mouth", "nose", "throat"],
+                answer: "nose",
+                explanation: "'Rhin/o' refers to the nose, as in 'rhinitis' (inflammation of the nose)."
+            },
+            {
+                question: "The combining form 'salping/o' refers to the:",
+                options: ["uterus", "ovary", "tube (usually fallopian or eustachian [auditory] tube)", "vagina"],
+                answer: "tube (usually fallopian or eustachian [auditory] tube)",
+                explanation: "'Salping/o' refers to a tube, most commonly the fallopian tube (uterine tube) or the eustachian (auditory) tube."
+            },
+            {
+                question: "What does 'scler/o' mean?",
+                options: ["softening", "hardening; sclera (white of eye)", "narrowing", "widening"],
+                answer: "hardening; sclera (white of eye)",
+                explanation: "'Scler/o' can mean hardening (as in 'arteriosclerosis') or refer to the sclera, the white outer layer of the eyeball."
+            },
+            {
+                question: "The combining form 'scoli/o' means:",
+                options: ["straight", "bent", "crooked, bent", "humpback"],
+                answer: "crooked, bent",
+                explanation: "'Scoli/o' means crooked or bent, referring to a lateral curvature of the spine (scoliosis)."
+            },
+            {
+                question: "What does 'seb/o' mean?",
+                options: ["sweat", "oil", "sebum, sebaceous", "hair"],
+                answer: "sebum, sebaceous",
+                explanation: "'Seb/o' refers to sebum or sebaceous (oil-producing) glands, as in 'seborrhea'."
+            },
+            {
+                question: "The combining form 'sept/o' refers to a:",
+                options: ["wall", "cavity", "septum", "opening"],
+                answer: "septum",
+                explanation: "'Sept/o' refers to a septum, a dividing wall or partition, such as the nasal septum."
+            },
+            {
+                question: "What does 'ser/o' mean?",
+                options: ["blood", "plasma", "serum", "fluid"],
+                answer: "serum",
+                explanation: "'Ser/o' refers to serum, the clear fluid portion of blood after clotting."
+            },
+            {
+                question: "The combining form 'sial/o' refers to:",
+                options: ["saliva, salivary gland", "mouth", "tongue", "throat"],
+                answer: "saliva, salivary gland",
+                explanation: "'Sial/o' refers to saliva or a salivary gland, as in 'sialadenitis' (inflammation of a salivary gland)."
+            },
+            {
+                question: "What does 'sider/o' mean?",
+                options: ["iron", "copper", "zinc", "calcium"],
+                answer: "iron",
+                explanation: "'Sider/o' means iron, as in 'sideropenia' (iron deficiency)."
+            },
+            {
+                question: "The combining form 'sigmoid/o' refers to the:",
+                options: ["colon", "rectum", "sigmoid colon", "anus"],
+                answer: "sigmoid colon",
+                explanation: "'Sigmoid/o' refers to the sigmoid colon, the S-shaped part of the large intestine."
+            },
+            {
+                question: "What does 'sinus/o' mean?",
+                options: ["tube", "opening", "sinus, cavity", "vessel"],
+                answer: "sinus, cavity",
+                explanation: "'Sinus/o' refers to a sinus or cavity, such as the paranasal sinuses."
+            },
+            {
+                question: "The combining form 'somat/o' means:",
+                options: ["mind", "body", "spirit", "soul"],
+                answer: "body",
+                explanation: "'Somat/o' means body, as in 'somatic' (relating to the body)."
+            },
+            {
+                question: "What does 'son/o' mean?",
+                options: ["light", "sound", "electricity", "radiation"],
+                answer: "sound",
+                explanation: "'Son/o' means sound, as in 'ultrasonography' (imaging using sound waves)."
+            },
+            {
+                question: "The combining form 'spermat/o' (or sperm/o) refers to:",
+                options: ["egg cells", "spermatozoa, sperm cells", "gonads", "embryonic cells"],
+                answer: "spermatozoa, sperm cells",
+                explanation: "These forms refer to spermatozoa or sperm cells, the male reproductive cells."
+            },
+            {
+                question: "What does 'sphygm/o' mean?",
+                options: ["heartbeat", "pulse", "blood pressure", "vessel"],
+                answer: "pulse",
+                explanation: "'Sphygm/o' means pulse, as in 'sphygmomanometer' (blood pressure cuff)."
+            },
+            {
+                question: "The combining form 'spin/o' refers to the:",
+                options: ["bone", "joint", "spine", "muscle"],
+                answer: "spine",
+                explanation: "'Spin/o' refers to the spine, as in 'spinal cord'."
+            },
+            {
+                question: "What does 'spir/o' mean?",
+                options: ["breathe", "cough", "sneeze", "swallow"],
+                answer: "breathe",
+                explanation: "'Spir/o' means to breathe, as in 'respiration' or 'spirometry' (measurement of breathing)."
+            },
+            {
+                question: "The combining form 'splen/o' refers to the:",
+                options: ["liver", "kidney", "spleen", "pancreas"],
+                answer: "spleen",
+                explanation: "'Splen/o' refers to the spleen, an organ involved in the immune system and blood filtration."
+            },
+            {
+                question: "What does 'spondyl/o' refer to?",
+                options: ["ribs", "sternum", "vertebrae (backbone)", "pelvis"],
+                answer: "vertebrae (backbone)",
+                explanation: "'Spondyl/o' refers to the vertebrae, the bones of the backbone, as in 'spondylitis'."
+            },
+            {
+                question: "The combining form 'squam/o' means:",
+                options: ["flat", "round", "scale", "square"],
+                answer: "scale",
+                explanation: "'Squam/o' means scale, referring to scale-like cells, as in 'squamous cell carcinoma'."
+            },
+            {
+                question: "What does 'sten/o' mean?",
+                options: ["widening", "narrowing, stricture", "opening", "closing"],
+                answer: "narrowing, stricture",
+                explanation: "'Sten/o' means narrowing or stricture, as in 'stenosis' (abnormal narrowing of a body passage)."
+            },
+            {
+                question: "The combining form 'stern/o' refers to the:",
+                options: ["ribs", "chest", "sternum (breastbone)", "spine"],
+                answer: "sternum (breastbone)",
+                explanation: "'Stern/o' refers to the sternum, which is the breastbone."
+            },
+            {
+                question: "What does 'steat/o' mean?",
+                options: ["water", "fat", "sugar", "protein"],
+                answer: "fat",
+                explanation: "'Steat/o' means fat, similar to 'lip/o', as in 'steatorrhea' (excess fat in feces)."
+            },
+            {
+                question: "The combining form 'steth/o' refers to the:",
+                options: ["abdomen", "back", "chest", "head"],
+                answer: "chest",
+                explanation: "'Steth/o' refers to the chest, as in 'stethoscope'."
+            },
+            {
+                question: "What does 'sthen/o' mean?",
+                options: ["weakness", "strength", "movement", "sensation"],
+                answer: "strength",
+                explanation: "'Sthen/o' means strength, as in 'myasthenia' (muscle weakness)."
+            },
+            {
+                question: "The combining form 'synov/o' refers to:",
+                options: ["cartilage", "bone", "joint", "synovial membrane, synovial fluid"],
+                answer: "synovial membrane, synovial fluid",
+                explanation: "'Synov/o' refers to the synovial membrane or synovial fluid, found in joints, as in 'synovitis'."
+            },
+            {
+                question: "What does 'tendin/o' (or tend/o, ten/o) refer to?",
+                options: ["muscle", "bone", "joint", "tendon"],
+                answer: "tendon",
+                explanation: "All these forms refer to a tendon, a fibrous connective tissue that attaches muscle to bone."
+            },
+            {
+                question: "The combining form 'test/o' refers to the:",
+                options: ["ovary", "uterus", "testis (plural, testes)", "prostate gland"],
+                answer: "testis (plural, testes)",
+                explanation: "'Test/o' refers to the testis (testicle), the male gonad."
+            },
+            {
+                question: "What does 'thalam/o' refer to?",
+                options: ["brainstem", "cerebellum", "thalamus", "cerebrum"],
+                answer: "thalamus",
+                explanation: "'Thalam/o' refers to the thalamus, a part of the brain that relays sensory information."
+            },
+            {
+                question: "The combining form 'thec/o' refers to a:",
+                options: ["membrane", "sheath (usually refers to meninges)", "cavity", "tube"],
+                answer: "sheath (usually refers to meninges)",
+                explanation: "'Thec/o' refers to a sheath, often specifically the meninges (membranes around the brain and spinal cord), as in 'intrathecal'."
+            },
+            {
+                question: "What does 'thorac/o' mean?",
+                options: ["abdomen", "chest", "back", "neck"],
+                answer: "chest",
+                explanation: "'Thorac/o' refers to the chest (thorax), as in 'thoracotomy' (surgical incision into the chest)."
+            },
+            {
+                question: "The combining form 'thromb/o' means:",
+                options: ["blood vessel", "blood cell", "blood clot", "blood flow"],
+                answer: "blood clot",
+                explanation: "'Thromb/o' means blood clot, as in 'thrombosis' (formation of a blood clot)."
+            },
+            {
+                question: "What does 'thym/o' refer to?",
+                options: ["thyroid gland", "adrenal gland", "thymus gland", "pituitary gland"],
+                answer: "thymus gland",
+                explanation: "'Thym/o' refers to the thymus gland, an organ of the immune system."
+            },
+            {
+                question: "The combining form 'thyr/o' (or thyroid/o) refers to the:",
+                options: ["parathyroid glands", "adrenal glands", "thyroid gland", "pituitary gland"],
+                answer: "thyroid gland",
+                explanation: "These forms refer to the thyroid gland, which produces hormones regulating metabolism."
+            },
+            {
+                question: "What does 'tibi/o' refer to?",
+                options: ["femur", "fibula", "tibia (larger bone of lower leg)", "patella"],
+                answer: "tibia (larger bone of lower leg)",
+                explanation: "'Tibi/o' refers to the tibia, the larger bone in the lower leg (shin bone)."
+            },
+            {
+                question: "The combining form 'tom/o' means:",
+                options: ["to cut", "to view", "to measure", "to write"],
+                answer: "to cut",
+                explanation: "'Tom/o' means to cut, as in 'anatomy' (to cut apart) or 'tomography' (imaging by sections/cuts)."
+            },
+            {
+                question: "What does 'ton/o' mean?",
+                options: ["movement", "sensation", "tension", "strength"],
+                answer: "tension",
+                explanation: "'Ton/o' means tension, as in 'hypertonia' (increased muscle tension)."
+            },
+            {
+                question: "The combining form 'tonsill/o' refers to the:",
+                options: ["pharynx", "larynx", "tonsils", "adenoids"],
+                answer: "tonsils",
+                explanation: "'Tonsill/o' refers to the tonsils, lymphoid tissues in the throat."
+            },
+            {
+                question: "What does 'trache/o' refer to?",
+                options: ["larynx", "bronchus", "trachea (windpipe)", "esophagus"],
+                answer: "trachea (windpipe)",
+                explanation: "'Trache/o' refers to the trachea, commonly known as the windpipe."
+            },
+            {
+                question: "The combining form 'trich/o' means:",
+                options: ["skin", "nails", "hair", "gland"],
+                answer: "hair",
+                explanation: "'Trich/o' refers to hair, as in 'trichotillomania' (hair-pulling disorder)."
+            },
+            {
+                question: "What does 'tympan/o' refer to?",
+                options: ["outer ear", "middle ear", "tympanic membrane (eardrum)", "inner ear"],
+                answer: "tympanic membrane (eardrum)",
+                explanation: "'Tympan/o' (or myring/o) refers to the tympanic membrane, the eardrum."
+            },
+            {
+                question: "The combining form 'umbilic/o' refers to the:",
+                options: ["abdomen", "groin", "umbilicus, navel", "pelvis"],
+                answer: "umbilicus, navel",
+                explanation: "'Umbilic/o' refers to the umbilicus, or navel (belly button)."
+            },
+            {
+                question: "What does 'ungu/o' refer to?",
+                options: ["skin", "hair", "nail", "bone"],
+                answer: "nail",
+                explanation: "'Ungu/o' refers to the nail, as in 'subungual' (under the nail)."
+            },
+            {
+                question: "The combining form 'ur/o' means:",
+                options: ["blood", "water", "urine, urinary tract", "kidney"],
+                answer: "urine, urinary tract",
+                explanation: "'Ur/o' refers to urine or the urinary tract, as in 'urology' (study of the urinary system)."
+            },
+            {
+                question: "What does 'ureter/o' refer to?",
+                options: ["kidney", "bladder", "ureter", "urethra"],
+                answer: "ureter",
+                explanation: "'Ureter/o' refers to the ureter, the tube that carries urine from the kidney to the bladder."
+            },
+            {
+                question: "The combining form 'urethr/o' refers to the:",
+                options: ["kidney", "bladder", "ureter", "urethra"],
+                answer: "urethra",
+                explanation: "'Urethr/o' refers to the urethra, the tube that carries urine from the bladder out of the body."
+            },
+            {
+                question: "What does 'uter/o' refer to?",
+                options: ["ovary", "vagina", "uterus (womb)", "fallopian tube"],
+                answer: "uterus (womb)",
+                explanation: "'Uter/o' refers to the uterus, or womb."
+            },
+            {
+                question: "The combining form 'valv/o' (or valvul/o) refer to?",
+                options: ["vessel", "valve", "chamber", "septum"],
+                answer: "valve",
+                explanation: "These forms refer to a valve, a structure that controls flow, particularly in the heart or blood vessels."
+            },
+            {
+                question: "The combining form 'vascul/o' (or vas/o) refers to a:",
+                options: ["nerve", "vessel (usually blood or lymph)", "duct", "muscle"],
+                answer: "vessel (usually blood or lymph)",
+                explanation: "These forms refer to a vessel (blood or lymph) or specifically the vas deferens (in the case of 'vas/o')."
+            },
+            {
+                question: "What does 'ven/o' mean?",
+                options: ["artery", "vein", "capillary", "blood"],
+                answer: "vein",
+                explanation: "'Ven/o' means vein, as in 'venipuncture' (drawing blood from a vein)."
+            },
+            {
+                question: "The combining form 'ventricul/o' refers to the:",
+                options: ["atrium", "ventricle (of the heart or brain)", "valve", "septum"],
+                answer: "ventricle (of the heart or brain)",
+                explanation: "'Ventricul/o' refers to a ventricle, either in the heart or the brain."
+            },
+            {
+                question: "What does 'vertebr/o' refer to?",
+                options: ["ribs", "sternum", "vertebrae (backbone)", "pelvis"],
+                answer: "vertebrae (backbone)",
+                explanation: "'Vertebr/o' refers to the vertebrae, the bones that make up the backbone."
+            },
+            {
+                question: "The combining form 'vesic/o' (or vesicul/o) refers to the:",
+                options: ["kidney", "bladder", "ureter", "seminal vesicle"],
+                answer: "bladder",
+                explanation: "'Vesic/o' refers to the bladder (often urinary bladder). 'Vesicul/o' specifically refers to a seminal vesicle."
+            },
+            {
+                question: "What does 'viscer/o' mean?",
+                options: ["external organs", "internal organs", "bones", "muscles"],
+                answer: "internal organs",
+                explanation: "'Viscer/o' refers to internal organs, or viscera."
+            },
+            {
+                question: "The combining form 'vitr/o' refers to the:",
+                options: ["cornea", "lens", "retina", "vitreous body (of the eye)"],
+                answer: "vitreous body (of the eye)",
+                explanation: "'Vitr/o' refers to the vitreous body, the clear gel that fills the space between the lens and the retina of the eye."
+            },
+            {
+                question: "What does 'xen/o' mean?",
+                options: ["self", "same", "foreign, strange", "new"],
+                answer: "foreign, strange",
+                explanation: "'Xen/o' means foreign or strange, as in 'xenograft' (a graft from a different species)."
+            },
+            {
+                question: "The combining form 'xer/o' means:",
+                options: ["wet", "moist", "dry", "cold"],
+                answer: "dry",
+                explanation: "'Xer/o' means dry, as in 'xeroderma' (dry skin)."
+            }
+        ];
+
+        // Shuffle and select 50 questions
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]]; // Swap elements
+            }
+        }
+
+        // The 'questions' array will hold the 50 questions for the current quiz attempt
+        const questions = [];
+
+
+        // DOM elements
+        const quizContainer = document.getElementById('quiz-container');
+        const questionArea = document.getElementById('question-area');
+        const questionText = document.getElementById('question-text');
+        const optionsArea = document.getElementById('options-area');
+        const submitButton = document.getElementById('submit-button');
+        const resultArea = document.getElementById('result-area');
+        const finalScore = document.getElementById('final-score');
+        const totalQuestions = document.getElementById('total-questions');
+        const retakeButton = document.getElementById('retake-button');
+        const feedbackMessage = document.getElementById('feedback');
+        const explainButton = document.getElementById('explain-button');
+        const explanationArea = document.getElementById('explanation-area');
+        const nextQuestionButton = document.getElementById('next-question-button');
+        const nameInputArea = document.getElementById('name-input-area');
+        const studentNameInput = document.getElementById('student-name');
+        const showBadgeButton = document.getElementById('show-badge-button');
+        const badgeDisplayArea = document.getElementById('badge-display-area');
+        const downloadButtonsArea = document.getElementById('download-buttons-area');
+        const downloadPngButton = document.getElementById('download-png-button');
+        const downloadPdfButton = document.getElementById('download-pdf-button');
+
+        // Quiz state variables
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let selectedOption = null;
+        let quizActive = true; // To prevent multiple submissions per question
+
+        /**
+         * Initializes the quiz by resetting state and displaying the first question.
+         */
+        function initializeQuiz() {
+            currentQuestionIndex = 0;
+            score = 0;
+            selectedOption = null;
+            quizActive = true;
+
+            // Reshuffle all questions and select 50 for the new quiz attempt
+            shuffleArray(allQuestions);
+            questions.splice(0, questions.length); // Clear previous questions
+            questions.push(...allQuestions.slice(0, 50)); // Add new 50 questions
+
+            // Show quiz elements, hide result elements
+            questionArea.classList.remove('hidden');
+            submitButton.classList.remove('hidden');
+            resultArea.classList.add('hidden');
+            feedbackMessage.classList.add('hidden');
+            feedbackMessage.textContent = '';
+            explainButton.classList.add('hidden'); // Hide explain button
+            explanationArea.classList.add('hidden'); // Hide explanation area
+            explanationArea.textContent = ''; // Clear explanation text
+            nextQuestionButton.classList.add('hidden'); // Hide next question button
+            submitButton.disabled = true; // Disable submit until an option is selected
+
+            // Hide name input and badge area for new quiz
+            nameInputArea.classList.add('hidden');
+            badgeDisplayArea.innerHTML = ''; // Clear any previous badge
+            downloadButtonsArea.classList.add('hidden'); // Hide download buttons
+
+            displayQuestion();
+        }
+
+        /**
+         * Displays the current question and its options.
+         */
+        function displayQuestion() {
+            if (currentQuestionIndex < questions.length) {
+                const questionData = questions[currentQuestionIndex];
+                questionText.textContent = `${currentQuestionIndex + 1}. ${questionData.question}`;
+                optionsArea.innerHTML = ''; // Clear previous options
+                feedbackMessage.classList.add('hidden'); // Hide feedback for new question
+                feedbackMessage.textContent = ''; // Clear feedback text
+                explainButton.classList.add('hidden'); // Hide explain button for new question
+                explanationArea.classList.add('hidden'); // Hide explanation area for new question
+                explanationArea.textContent = ''; // Clear explanation text
+                nextQuestionButton.classList.add('hidden'); // Hide next question button for new question
+                submitButton.classList.remove('hidden'); // Ensure submit button is visible for new question
+                submitButton.disabled = true; // Disable submit for new question
+                selectedOption = null; // Reset selected option
+
+                questionData.options.forEach(option => {
+                    const button = document.createElement('button');
+                    button.textContent = option;
+                    button.classList.add('option-button');
+                    button.addEventListener('click', () => selectOption(button, option));
+                    optionsArea.appendChild(button);
+                });
+                quizActive = true; // Re-enable quiz for the new question
+            } else {
+                // All questions answered, show name input then results
+                showNameInputForResults();
+            }
+        }
+
+        /**
+         * Handles the selection of an option.
+         * @param {HTMLElement} button - The button element that was clicked.
+         * @param {string} option - The text content of the selected option.
+         */
+        function selectOption(button, option) {
+            // Remove 'selected' class from all other buttons
+            document.querySelectorAll('.option-button').forEach(btn => {
+                btn.classList.remove('selected');
+            });
+
+            // Add 'selected' class to the clicked button
+            button.classList.add('selected');
+            selectedOption = option;
+            submitButton.disabled = false; // Enable submit button once an option is selected
+        }
+
+        /**
+         * Checks the selected answer against the correct answer.
+         */
+        function checkAnswer() {
+            if (!quizActive || selectedOption === null) {
+                // Prevent multiple submissions or submission without selection
+                return;
+            }
+
+            quizActive = false; // Disable further interaction for this question
+            submitButton.disabled = true; // Keep submit button disabled after checking
+
+            const questionData = questions[currentQuestionIndex];
+            const correct = selectedOption === questionData.answer;
+
+            // Provide visual feedback on options
+            document.querySelectorAll('.option-button').forEach(btn => {
+                if (btn.textContent === questionData.answer) {
+                    btn.classList.add('correct'); // Mark correct answer
+                }
+                if (btn.textContent === selectedOption && !correct) {
+                    btn.classList.add('incorrect'); // Mark incorrect selected answer
+                }
+                btn.disabled = true; // Disable all option buttons after submission
+            });
+
+            // Show textual feedback
+            feedbackMessage.classList.remove('hidden');
+            feedbackMessage.classList.remove('correct', 'incorrect'); // Clear previous feedback classes
+            if (correct) {
+                score++;
+                feedbackMessage.textContent = "Correct!";
+                feedbackMessage.classList.add('correct');
+            } else {
+                feedbackMessage.textContent = `Incorrect. The correct answer was: ${questionData.answer}`;
+                feedbackMessage.classList.add('incorrect');
+            }
+
+            // Show the explain button and the next question button
+            explainButton.classList.remove('hidden');
+            nextQuestionButton.classList.remove('hidden'); // Show Next Question button
+            submitButton.classList.add('hidden'); // Hide submit button after answer is checked
+        }
+
+        /**
+         * Displays the pre-defined explanation for the current question.
+         */
+        function displayPredefinedExplanation() {
+            const questionData = questions[currentQuestionIndex];
+            explanationArea.textContent = questionData.explanation;
+            explanationArea.classList.remove('hidden');
+            explainButton.classList.add('hidden'); // Hide the explain button after showing explanation
+            // nextQuestionButton is already visible from checkAnswer()
+        }
+
+        /**
+         * Advances to the next question.
+         */
+        function goToNextQuestion() {
+            currentQuestionIndex++;
+            displayQuestion();
+        }
+
+        /**
+         * Shows the name input field before displaying final results.
+         */
+        function showNameInputForResults() {
+            questionArea.classList.add('hidden');
+            submitButton.classList.add('hidden');
+            feedbackMessage.classList.add('hidden');
+            explainButton.classList.add('hidden');
+            explanationArea.classList.add('hidden');
+            nextQuestionButton.classList.add('hidden'); // Hide next question button
+
+            resultArea.classList.remove('hidden');
+            nameInputArea.classList.remove('hidden'); // Show the name input area
+            studentNameInput.value = ''; // Clear previous name
+            finalScore.classList.add('hidden'); // Hide score until name is submitted
+            retakeButton.classList.add('hidden'); // Hide retake button initially
+            downloadButtonsArea.classList.add('hidden'); // Ensure download buttons are hidden until badge is generated
+        }
+
+        /**
+         * Displays the final score and the option to retake the quiz.
+         * Also handles badge generation if criteria are met.
+         */
+        function showResultAndBadge() {
+            const studentName = studentNameInput.value.trim();
+            nameInputArea.classList.add('hidden'); // Hide name input area
+            finalScore.classList.remove('hidden'); // Show score
+
+            const percentage = (score / questions.length) * 100;
+            finalScore.textContent = `${score} out of ${questions.length} (${percentage.toFixed(0)}%)`;
+            totalQuestions.textContent = questions.length; // This is redundant with the above, but kept for clarity
+
+            if (percentage >= 80) {
+                generateBadge(studentName);
+                downloadButtonsArea.classList.remove('hidden'); // Show download buttons if badge is earned
+            } else {
+                badgeDisplayArea.innerHTML = `<p class="text-red-600 mt-4 text-lg font-semibold">Keep practicing! You can do it!</p>`;
+                downloadButtonsArea.classList.add('hidden'); // Keep download buttons hidden if no badge
+            }
+            retakeButton.classList.remove('hidden'); // Show retake button
+        }
+
+        /**
+         * Generates and displays the e-badge.
+         * @param {string} name - The student's name to display on the badge.
+         */
+        function generateBadge(name) {
+            const badgeName = name === "" ? "Awesome Student" : name; // Default name if empty
+            const badgeHTML = `
+                <div id="actual-badge" class="badge-container">
+                    <span class="badge-icon">🏆</span>
+                    <p class="badge-text">Congratulations!</p>
+                    <p class="badge-name">${badgeName}</p>
+                    <p class="badge-message">You've earned a Medical Terminology Master Badge!</p>
+                    <p class="badge-message text-sm mt-2">Score: ${((score / questions.length) * 100).toFixed(0)}%</p>
+                    <div class="health-metrix-footer">
+                        Powered by <a href="https://www.healthmetrixbw.com" target="_blank" rel="noopener noreferrer">Health Metrix</a>
+                    </div>
+                </div>
+            `;
+            badgeDisplayArea.innerHTML = badgeHTML;
+        }
+
+        /**
+         * Downloads the badge as a PNG image.
+         */
+        async function downloadBadgePng() {
+            const badgeElement = document.getElementById('actual-badge');
+            if (!badgeElement) {
+                console.error("Badge element not found for download.");
+                return;
+            }
+
+            try {
+                // Use a higher scale for better resolution
+                const canvas = await html2canvas(badgeElement, { scale: 4 });
+                const image = canvas.toDataURL('image/png');
+                const link = document.createElement('a');
+                link.href = image;
+                link.download = 'medical_terminology_badge.png';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            } catch (error) {
+                console.error("Error generating PNG badge:", error);
+                alert("Failed to generate PNG badge. Please try again.");
+            }
+        }
+
+        /**
+         * Downloads the badge as a PDF document.
+         */
+        async function downloadBadgePdf() {
+            const badgeElement = document.getElementById('actual-badge');
+            if (!badgeElement) {
+                console.error("Badge element not found for download.");
+                return;
+            }
+
+            try {
+                // Use a higher scale for better resolution
+                const canvas = await html2canvas(badgeElement, { scale: 4 });
+                const imgData = canvas.toDataURL('image/png');
+
+                const { jsPDF } = window.jspdf;
+                // Calculate PDF dimensions based on desired badge size (800x500px)
+                // jsPDF typically uses points (72 points per inch). If canvas is 800x500px,
+                // and we want it to fit on a standard PDF page, we might need to adjust.
+                // For direct pixel mapping, use 'px' unit and canvas dimensions.
+                const pdf = new jsPDF({
+                    orientation: 'landscape',
+                    unit: 'px',
+                    format: [800, 500] // Set PDF size to desired badge size
+                });
+
+                // Add image to PDF. Arguments: imgData, format, x, y, width, height
+                pdf.addImage(imgData, 'PNG', 0, 0, 800, 500);
+                pdf.save('medical_terminology_badge.pdf');
+            } catch (error) {
+                console.error("Error generating PDF badge:", error);
+                alert("Failed to generate PDF badge. Please try again.");
+            }
+        }
+
+
+        // Event Listeners
+        submitButton.addEventListener('click', checkAnswer);
+        retakeButton.addEventListener('click', initializeQuiz);
+        explainButton.addEventListener('click', displayPredefinedExplanation);
+        nextQuestionButton.addEventListener('click', goToNextQuestion);
+        showBadgeButton.addEventListener('click', showResultAndBadge);
+        downloadPngButton.addEventListener('click', downloadBadgePng);
+        downloadPdfButton.addEventListener('click', downloadBadgePdf);
+
+        // Initialize the quiz when the page loads
+        document.addEventListener('DOMContentLoaded', initializeQuiz);
+    </script>
+</body>
+</html>
